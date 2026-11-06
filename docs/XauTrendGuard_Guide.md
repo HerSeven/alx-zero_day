@@ -35,9 +35,9 @@
 | `MQL5/Files/XauTrendGuard_News_TEMPLATE.csv` | Template for the news CSV used in backtests |
 | `.github/workflows/compile-mql5.yml` | CI job: installs MT5 on Windows, compiles the EA, uploads the `.ex5` |
 
-**Compiled `.ex5`.** Each push runs the GitHub Actions workflow *Compile XauTrendGuard (MQL5)*, which
+**Compiled `.ex5`.** Each push runs the GitHub Actions workflow *Compile MQL5 EAs (XauTrendGuard, Bot15)*, which
 compiles the EA with the official MetaEditor. The `.ex5` and the compiler log are attached to the run as the
-artifact `XauTrendGuard-ex5`. You can also compile it yourself in MetaEditor (press F7, see §6).
+artifact `compiled-ex5`. You can also compile it yourself in MetaEditor (press F7, see §6).
 
 ---
 

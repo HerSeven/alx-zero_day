@@ -1,4 +1,4 @@
-name: Compile XauTrendGuard (MQL5)
+name: Compile MQL5 EAs (XauTrendGuard, Bot15)
 
 on:
   push:
@@ -40,7 +40,7 @@ jobs:
           }
           Get-ChildItem -Path "$mt", "$env:APPDATA\MetaQuotes" -Recurse -Filter Trade.mqh -ErrorAction SilentlyContinue | Select-Object FullName
 
-      - name: Compile EA with MetaEditor
+      - name: Compile EAs with MetaEditor
         shell: pwsh
         run: |
           $mt = "C:\Program Files\MetaTrader 5"
@@ -49,26 +49,28 @@ jobs:
           if (-not $trade) { throw "MQL5 standard library (Trade.mqh) not found" }
           $root = $trade.Directory.Parent.Parent.FullName    # ...\MQL5
           Write-Host "MQL5 root: $root"
-          $dst = Join-Path $root "Experts\XauTrendGuard"
-          New-Item -ItemType Directory -Force -Path $dst | Out-Null
-          Copy-Item -Recurse -Force "MQL5\Experts\XauTrendGuard\*" $dst
-          $log = Join-Path $env:GITHUB_WORKSPACE "compile.log"
-          $src = Join-Path $dst "XauTrendGuard.mq5"
-          $me = Start-Process -FilePath "$mt\MetaEditor64.exe" -ArgumentList "/portable","/compile:`"$src`"","/inc:`"$root`"","/log:`"$log`"" -PassThru -Wait
-          $text = Get-Content $log -Encoding Unicode -Raw
-          if (-not $text) { $text = Get-Content $log -Raw }
-          Write-Host "================ MetaEditor log ================"
-          Write-Host $text
           New-Item -ItemType Directory -Force -Path build | Out-Null
-          $ex5 = Join-Path $dst "XauTrendGuard.ex5"
-          if (Test-Path $ex5) { Copy-Item $ex5 build\ }
-          Copy-Item $log build\
-          if ($text -notmatch "Result:\s*0 errors") { throw "Compilation failed" }
-          if (-not (Test-Path $ex5)) { throw "No .ex5 produced" }
+          $failed = @()
+          foreach ($ea in @("XauTrendGuard", "Bot15")) {
+            $dst = Join-Path $root "Experts\$ea"
+            New-Item -ItemType Directory -Force -Path $dst | Out-Null
+            Copy-Item -Recurse -Force "MQL5\Experts\$ea\*" $dst
+            $log = Join-Path $env:GITHUB_WORKSPACE "build\$ea-compile.log"
+            $src = Join-Path $dst "$ea.mq5"
+            Start-Process -FilePath "$mt\MetaEditor64.exe" -ArgumentList "/portable","/compile:`"$src`"","/inc:`"$root`"","/log:`"$log`"" -Wait
+            $text = Get-Content $log -Encoding Unicode -Raw
+            if (-not $text) { $text = Get-Content $log -Raw }
+            Write-Host "================ $ea - MetaEditor log ================"
+            Write-Host $text
+            $ex5 = Join-Path $dst "$ea.ex5"
+            if (Test-Path $ex5) { Copy-Item $ex5 build\ }
+            if ($text -notmatch "Result:\s*0 errors" -or -not (Test-Path $ex5)) { $failed += $ea }
+          }
+          if ($failed.Count -gt 0) { throw "Compilation failed: $($failed -join ', ')" }
 
       - name: Upload compiled EA
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: XauTrendGuard-ex5
+          name: compiled-ex5
           path: build/

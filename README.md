@@ -11,8 +11,18 @@ dashboard.
 * Full guide covering installation, configuration, strategy, backtesting and troubleshooting:
   [`docs/XauTrendGuard_Guide.md`](docs/XauTrendGuard_Guide.md)
 * Presets: [`MQL5/Presets/`](MQL5/Presets/)
-* Compiled `.ex5`: the GitHub Actions workflow **Compile XauTrendGuard (MQL5)** builds it with the official
-  MetaEditor on every push. Download it from the run's `XauTrendGuard-ex5` artifact.
+* Compiled `.ex5`: the GitHub Actions workflow **Compile MQL5 EAs (XauTrendGuard, Bot15)** builds it with the official
+  MetaEditor on every push. Download it from the run's `compiled-ex5` artifact.
 
 > **Not a profit guarantee.** No backtest results are claimed. Backtest it, validate it out of sample and
 > walk-forward, and run it on demo before you use real money.
+
+## Bot15
+
+**Bot15** is the same EA with wider account limits: up to **50 trades per day**, **9 % max daily loss** and
+**15 % max weekly drawdown**. Strategy, filters, per-trade risk (1 %, max 2 %) and the 3-position cap are
+unchanged. It has its own magic number, so it can run next to XauTrendGuard.
+
+* Source: [`MQL5/Experts/Bot15/`](MQL5/Experts/Bot15/)
+* Guide: [`docs/Bot15_Guide.md`](docs/Bot15_Guide.md)
+* Presets: `MQL5/Presets/Bot15_Default.set`, `MQL5/Presets/Bot15_Conservative.set`
