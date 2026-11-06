@@ -153,8 +153,12 @@ public:
       if(!InpUseNewsFilter)
          return;
       datetime now=TimeCurrent();
-      if(!force && m_lastRefresh!=0 && now-m_lastRefresh<15*60)
+      //--- refresh every 15 min; retry every 5 min while no data source is available
+      int every=(m_active ? 15*60 : 5*60);
+      if(!force && m_lastRefresh!=0 && now-m_lastRefresh<every)
          return;
+      if(m_tester && !force)
+         return;    // tester: CSV is loaded once, the calendar never exists
       m_lastRefresh=now;
       if(m_tester)
         {

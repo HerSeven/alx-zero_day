@@ -1,0 +1,8 @@
+# XauTrendGuard news file for Strategy Tester runs
+# Copy to: <MT5 data folder>\..\Common\Files\  and set InpNewsCsvFile to the file name.
+# One event per line: time in UTC (YYYY.MM.DD HH:MM),event title
+# Fill with real historical event times from an economic-calendar export.
+# Titles containing CPI / Nonfarm / Payroll / FOMC / Federal Funds / Interest Rate Decision / PCE
+# are treated as key Gold events.
+# Example format (replace with real data):
+# 2024.01.05 13:30,Nonfarm Payrolls
