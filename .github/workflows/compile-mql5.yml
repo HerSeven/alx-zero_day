@@ -1,0 +1,74 @@
+name: Compile XauTrendGuard (MQL5)
+
+on:
+  push:
+    paths:
+      - "MQL5/**"
+      - ".github/workflows/compile-mql5.yml"
+  workflow_dispatch:
+
+jobs:
+  compile:
+    runs-on: windows-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install MetaTrader 5 (silent)
+        shell: pwsh
+        run: |
+          $ProgressPreference = 'SilentlyContinue'
+          Invoke-WebRequest "https://download.mql5.com/cdn/web/metaquotes.software.corp/mt5/mt5setup.exe" -OutFile mt5setup.exe
+          $p = Start-Process -FilePath .\mt5setup.exe -ArgumentList "/auto" -PassThru
+          if (-not $p.WaitForExit(900000)) { Write-Host "Installer still running after 15 min - continuing" }
+          Start-Sleep -Seconds 10
+          Get-Process terminal64,metaeditor64,mt5setup -ErrorAction SilentlyContinue | Stop-Process -Force
+          Get-ChildItem "C:\Program Files\MetaTrader 5" | Select-Object Name
+
+      - name: Unpack MQL5 standard library (portable start)
+        shell: pwsh
+        run: |
+          $mt = "C:\Program Files\MetaTrader 5"
+          if (-not (Test-Path "$mt\MQL5\Include\Trade\Trade.mqh")) {
+            $t = Start-Process -FilePath "$mt\terminal64.exe" -ArgumentList "/portable" -PassThru
+            for ($i = 0; $i -lt 60; $i++) {
+              if (Test-Path "$mt\MQL5\Include\Trade\Trade.mqh") { break }
+              Start-Sleep -Seconds 5
+            }
+            Start-Sleep -Seconds 10
+            Get-Process terminal64 -ErrorAction SilentlyContinue | Stop-Process -Force
+          }
+          Get-ChildItem -Path "$mt", "$env:APPDATA\MetaQuotes" -Recurse -Filter Trade.mqh -ErrorAction SilentlyContinue | Select-Object FullName
+
+      - name: Compile EA with MetaEditor
+        shell: pwsh
+        run: |
+          $mt = "C:\Program Files\MetaTrader 5"
+          $trade = Get-ChildItem -Path "$mt", "$env:APPDATA\MetaQuotes" -Recurse -Filter Trade.mqh -ErrorAction SilentlyContinue |
+                   Where-Object { $_.FullName -like "*\Include\Trade\Trade.mqh" } | Select-Object -First 1
+          if (-not $trade) { throw "MQL5 standard library (Trade.mqh) not found" }
+          $root = $trade.Directory.Parent.Parent.FullName    # ...\MQL5
+          Write-Host "MQL5 root: $root"
+          $dst = Join-Path $root "Experts\XauTrendGuard"
+          New-Item -ItemType Directory -Force -Path $dst | Out-Null
+          Copy-Item -Recurse -Force "MQL5\Experts\XauTrendGuard\*" $dst
+          $log = Join-Path $env:GITHUB_WORKSPACE "compile.log"
+          $src = Join-Path $dst "XauTrendGuard.mq5"
+          $me = Start-Process -FilePath "$mt\MetaEditor64.exe" -ArgumentList "/portable","/compile:`"$src`"","/inc:`"$root`"","/log:`"$log`"" -PassThru -Wait
+          $text = Get-Content $log -Encoding Unicode -Raw
+          if (-not $text) { $text = Get-Content $log -Raw }
+          Write-Host "================ MetaEditor log ================"
+          Write-Host $text
+          New-Item -ItemType Directory -Force -Path build | Out-Null
+          $ex5 = Join-Path $dst "XauTrendGuard.ex5"
+          if (Test-Path $ex5) { Copy-Item $ex5 build\ }
+          Copy-Item $log build\
+          if ($text -notmatch "Result:\s*0 errors") { throw "Compilation failed" }
+          if (-not (Test-Path $ex5)) { throw "No .ex5 produced" }
+
+      - name: Upload compiled EA
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: XauTrendGuard-ex5
+          path: build/
